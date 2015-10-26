@@ -27,6 +27,11 @@ from functools import wraps, update_wrapper
 from datetime import datetime
 import time
 import datetime
+import tornado.wsgi
+import tornado.httpserver
+import tornado.ioloop
+import tornado.options
+import tornado.autoreload
 from flask import jsonify
 matplotlib.style.use('ggplot')
 
@@ -192,7 +197,7 @@ class LastNameForm(Form):
 app = Flask(__name__)
 
 #manager = Manager(app)
-app = Flask(__name__)
+
 
 app.config['SECRET_KEY'] = 'hard to guess string'
 
@@ -295,11 +300,34 @@ def get_lat_lng_elevation(address):
     
 
 
+def run_server():
+    http_server = tornado.httpserver.HTTPServer(
+        tornado.wsgi.WSGIContainer(app)
+    )
+    http_server.listen(5000)
+
+    # Reads args given at command line (this also enables logging to stderr)
+    tornado.options.parse_command_line()
+
+    # Start the I/O loop with autoreload
+    io_loop = tornado.ioloop.IOLoop.instance()
+    tornado.autoreload.start(io_loop)
+    try:
+        io_loop.start()
+    except KeyboardInterrupt:
+        pass
+
+
 
 @app.route('/')
 def index():
     form = NameForm(request.form)
     return render_template('reviewform.html', form=form)
+
+
+
+
+
 
 
 @app.route('/results', methods=['POST'])
@@ -880,7 +908,8 @@ def internal_server_error(e):
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+   run_server()
+   # app.run(debug=True)
 
 
 
